@@ -1,0 +1,50 @@
+import { http } from "./http";
+
+export type Video = {
+  id: number;
+  userId: number;
+  title: string;
+  thumbnailUrl: string | null;
+  duration: number | null;
+  viewCount: number;
+  createdAt: string;
+};
+
+export type VideoSlice = {
+  content: Video[];
+  last: boolean;
+};
+
+export type ProfileUser = {
+  id: number;
+  username: string;
+  profileUrl: string | null;
+  visibility: string;
+  createdAt: string | null;
+};
+
+const PAGE_SIZE = 20;
+
+export async function fetchVideoPage(page: number, title?: string): Promise<VideoSlice> {
+  const res = await http.get<{ success: boolean; videos?: VideoSlice }>("/videos", {
+    params: { page, size: PAGE_SIZE, ...(title ? { title } : {}) },
+  });
+  const slice = res.data.videos ?? (res.data as unknown as VideoSlice);
+  return slice ?? { content: [], last: true };
+}
+
+export async function subscribe(channelId: number): Promise<void> {
+  await http.post(`/users/${channelId}/subscribe`, {});
+}
+
+export async function unsubscribe(channelId: number): Promise<void> {
+  await http.delete(`/users/${channelId}/subscribe`);
+}
+
+export async function searchUsers(name: string): Promise<ProfileUser[]> {
+  const res = await http.get<ProfileUser[]>("/users", {
+    params: { name: name.trim() },
+  });
+  const data = res.data;
+  return Array.isArray(data) ? data : [];
+}

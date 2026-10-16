@@ -1,6 +1,9 @@
-import type { Video } from "../data/videos";
+import type { Video } from "../lib/api";
 
-function Views({ views }: { views: number }) {
+const thumbnailFallback =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%2316181d'/%3E%3C/svg%3E";
+
+function formatViews(views: number): string {
   return views >= 1_000_000
     ? `${(views / 1_000_000).toFixed(1)}M views`
     : views >= 1_000
@@ -8,48 +11,54 @@ function Views({ views }: { views: number }) {
       : `${views} views`;
 }
 
-function TimeAgo({ days }: { days: number }) {
-  return days < 7
-    ? `${days} day${days === 1 ? "" : "s"} ago`
-    : days < 30
-      ? `${Math.round(days / 7)} week${Math.round(days / 7) === 1 ? "" : "s"} ago`
-      : days < 365
-        ? `${Math.round(days / 30)} months ago`
-        : `${Math.round(days / 365)} years ago`;
+function formatTimeAgo(createdAt: string): string {
+  const days = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000));
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (days < 30) {
+    const weeks = Math.round(days / 7);
+    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+  }
+  if (days < 365) {
+    const months = Math.round(days / 30);
+    return `${months} month${months === 1 ? "" : "s"} ago`;
+  }
+  const years = Math.round(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds == null) return "";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
 }
 
 export default function VideoCard({ video }: { video: Video }) {
   return (
-    <a href="#" className="group block">
-      {/* Thumbnail */}
+    <a href={`/watch/${video.id}`} className="group block">
       <div className="relative overflow-hidden rounded-lg bg-surface ring-1 ring-border transition group-hover:ring-accent">
         <img
-          src={video.thumbnail}
+          src={video.thumbnailUrl ?? thumbnailFallback}
           alt={video.title}
           loading="lazy"
           className="aspect-video w-full object-cover"
         />
-        <span className="absolute right-2 bottom-2 rounded bg-bg/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums backdrop-blur-sm">
-          {video.duration}
-        </span>
+        {video.duration != null && (
+          <span className="absolute right-2 bottom-2 rounded bg-bg/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums backdrop-blur-sm">
+            {formatDuration(video.duration)}
+          </span>
+        )}
       </div>
 
-      {/* Meta */}
       <div className="mt-3 flex gap-3">
-        <img
-          src={video.channel.avatar}
-          alt={video.channel.name}
-          className="h-9 w-9 shrink-0 rounded-md object-cover ring-1 ring-border"
-        />
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm leading-snug font-semibold group-hover:text-accent">
             {video.title}
           </h3>
-          <p className="mt-1 truncate text-xs text-text-dim">
-            {video.channel.name}
-          </p>
-          <p className="text-xs text-text-dim">
-            <Views views={video.views} /> · <TimeAgo days={video.daysAgo} />
+          <p className="mt-1 text-xs text-text-dim">
+            {formatViews(video.viewCount)} · {formatTimeAgo(video.createdAt)}
           </p>
         </div>
       </div>

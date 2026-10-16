@@ -1,13 +1,19 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23272727'/%3E%3Ccircle cx='12' cy='9.5' r='4' fill='%23aaaaaa'/%3E%3Cpath d='M4 20a8 8 0 0 1 16 0z' fill='%23aaaaaa'/%3E%3C/svg%3E";
 
 export default function Navbar({ user }: { user: { name: string; avatar?: string } }) {
   const [query, setQuery] = useState("");
+  const navigate = useNavigate();
+
+  const search = () => {
+    const name = query.trim();
+    if (name) navigate(`/search?name=${encodeURIComponent(name)}`);
+  };
 
   return (
     <header className="fixed inset-x-0 top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-bg px-4">
-      {/* Menu + logo */}
       <div className="flex items-center gap-4">
         <button aria-label="Menu" className="cursor-pointer rounded-full p-2 hover:bg-surface-hover">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -24,14 +30,17 @@ export default function Navbar({ user }: { user: { name: string; avatar?: string
         </a>
       </div>
 
-      {/* Search */}
       <form
         className="mx-auto hidden w-full max-w-xl items-center sm:flex"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          search();
+        }}
       >
         <input
           type="search"
-          placeholder="Search"
+          placeholder="Search videos"
+          aria-label="Search videos"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-10 w-full rounded-l-full border border-border bg-surface px-4 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
@@ -47,19 +56,28 @@ export default function Navbar({ user }: { user: { name: string; avatar?: string
         </button>
       </form>
 
-      <button aria-label="Search" className="cursor-pointer rounded-full p-2 hover:bg-surface-hover sm:hidden">
+      <button
+        aria-label="Search"
+        onClick={search}
+        className="cursor-pointer rounded-full p-2 hover:bg-surface-hover sm:hidden"
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
         </svg>
       </button>
 
-      {/* Profile */}
-      <img
-        src={user.avatar ?? defaultAvatar}
-        alt="Profile"
-        className="h-8 w-8 cursor-pointer rounded-full"
-      />
+      <Link
+        to="/me"
+        aria-label="Your profile"
+        className="cursor-pointer rounded-full"
+      >
+        <img
+          src={user.avatar ?? defaultAvatar}
+          alt="Profile"
+          className="h-8 w-8 rounded-full"
+        />
+      </Link>
     </header>
   );
 }
