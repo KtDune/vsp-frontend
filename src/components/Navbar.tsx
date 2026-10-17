@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getToken } from "../lib/token";
 
 const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23272727'/%3E%3Ccircle cx='12' cy='9.5' r='4' fill='%23aaaaaa'/%3E%3Cpath d='M4 20a8 8 0 0 1 16 0z' fill='%23aaaaaa'/%3E%3C/svg%3E";
 
 export default function Navbar({ user }: { user: { name: string; avatar?: string } }) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const hasToken = getToken() !== null;
+  const showAuthLinks = !hasToken && location.pathname !== "/login" && location.pathname !== "/signup";
 
   const search = () => {
     const name = query.trim();
@@ -67,17 +72,34 @@ export default function Navbar({ user }: { user: { name: string; avatar?: string
         </svg>
       </button>
 
-      <Link
-        to="/me"
-        aria-label="Your profile"
-        className="cursor-pointer rounded-full"
-      >
-        <img
-          src={user.avatar ?? defaultAvatar}
-          alt="Profile"
-          className="h-8 w-8 rounded-full"
-        />
-      </Link>
+      {hasToken ? (
+        <Link
+          to="/me"
+          aria-label="Your profile"
+          className="cursor-pointer rounded-full"
+        >
+          <img
+            src={user.avatar ?? defaultAvatar}
+            alt="Profile"
+            className="h-8 w-8 rounded-full"
+          />
+        </Link>
+      ) : showAuthLinks ? (
+        <div className="flex items-center gap-2">
+          <Link
+            to="/login"
+            className="rounded-full px-3 py-1.5 text-sm font-medium text-text hover:bg-surface-hover"
+          >
+            Log in
+          </Link>
+          <Link
+            to="/signup"
+            className="rounded-full border border-border bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Sign up
+          </Link>
+        </div>
+      ) : null}
     </header>
   );
 }

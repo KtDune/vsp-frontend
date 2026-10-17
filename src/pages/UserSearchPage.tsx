@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { searchUsers, type ProfileUser } from "../lib/api";
+import { defaultAvatar } from "../data/user";
 import SubscribeButton from "../components/SubscribeButton";
-
-const defaultAvatar =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23272727'/%3E%3Ccircle cx='12' cy='9.5' r='4' fill='%23aaaaaa'/%3E%3Cpath d='M4 20a8 8 0 0 1 16 0z' fill='%23aaaaaa'/%3E%3C/svg%3E";
 
 const formatDate = (iso: string | null) =>
   iso &&

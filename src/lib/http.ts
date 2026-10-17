@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getToken } from "./token";
 
 export const http = axios.create({
   baseURL: "/api/v1",
@@ -7,18 +8,8 @@ export const http = axios.create({
   },
 });
 
-const TOKEN_KEY = "accessToken";
-
-export function setAccessToken(token: string | null) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-}
-
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
