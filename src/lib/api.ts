@@ -40,6 +40,31 @@ export type Post = {
 
 const PAGE_SIZE = 20;
 
+export type SubscribedChannel = {
+  id: number;
+  channelId: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  channelUsername: string | null;
+  channelProfileUrl: string | null;
+};
+
+export type MySubscriptions = {
+  subscriptions: SubscribedChannel[];
+  pendingRequests: SubscribedChannel[];
+};
+
+export async function fetchMySubscriptions(): Promise<MySubscriptions> {
+  const res = await http.get<{
+    success: boolean;
+    subscriptions?: SubscribedChannel[];
+    pendingRequests?: SubscribedChannel[];
+  }>("/subscriptions/mine", { params: { page: 0, size: 50 } });
+  return {
+    subscriptions: res.data.subscriptions ?? [],
+    pendingRequests: res.data.pendingRequests ?? [],
+  };
+}
+
 export async function fetchVideoPage(
   page: number,
   title?: string,

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { defaultAvatar } from "../data/user";
 
-export default function Navbar() {
+export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,7 +20,11 @@ export default function Navbar() {
   return (
     <header className="fixed inset-x-0 top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-bg px-4">
       <div className="flex items-center gap-4">
-        <button aria-label="Menu" className="cursor-pointer rounded-full p-2 hover:bg-surface-hover">
+        <button
+          aria-label="Menu"
+          onClick={onMenuClick}
+          className="cursor-pointer rounded-full p-2 hover:bg-surface-hover"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
           </svg>
