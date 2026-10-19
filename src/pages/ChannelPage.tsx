@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import PostCard from "../components/PostCard";
+import TabButton from "../components/TabButton";
 import VideoCard from "../components/VideoCard";
 import SubscribeButton from "../components/SubscribeButton";
 import { defaultAvatar } from "../data/user";
-import { fetchUserByName, fetchVideoPage, type ProfileUser, type Video } from "../lib/api";
+import {
+  fetchPosts,
+  fetchUserByName,
+  fetchVideoPage,
+  type Post,
+  type ProfileUser,
+  type Video,
+} from "../lib/api";
 
 const formatDate = (iso: string | null) =>
   iso &&
@@ -22,12 +31,16 @@ export default function ChannelPage() {
   const [missing, setMissing] = useState(false);
   const [videos, setVideos] = useState<Video[] | null>(null);
   const [prevName, setPrevName] = useState<string | null>(invalid ? null : username);
+  const [tab, setTab] = useState<"videos" | "posts">("videos");
+  const [posts, setPosts] = useState<Post[] | null>(null);
 
   if (!invalid && prevName !== username) {
     setPrevName(username);
     setUser(null);
     setVideos(null);
     setMissing(false);
+    setPosts(null);
+    setTab("videos");
   }
 
   useEffect(() => {
@@ -66,6 +79,24 @@ export default function ChannelPage() {
     };
   }, [username, invalid]);
 
+  useEffect(() => {
+    if (invalid || tab !== "posts") return;
+
+    let cancelled = false;
+
+    fetchPosts({ username })
+      .then((p) => {
+        if (!cancelled) setPosts(p);
+      })
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, username, invalid]);
+
   if (invalid || missing) {
     return (
       <main className="mx-auto max-w-2xl px-4 pt-24 pb-10">
@@ -90,6 +121,25 @@ export default function ChannelPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
         {videos.map((video) => (
           <VideoCard key={video.id} video={video} />
+        ))}
+      </div>
+    );
+  }
+
+  let postsBody: React.ReactNode;
+  if (posts === null) {
+    postsBody = <p className="text-sm text-text-dim">Loading posts…</p>;
+  } else if (posts.length === 0) {
+    postsBody = (
+      <p className="text-sm text-text-dim">
+        {isPrivate ? "This account is private." : "No posts yet."}
+      </p>
+    );
+  } else {
+    postsBody = (
+      <div className="mx-auto flex max-w-2xl flex-col gap-3">
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
         ))}
       </div>
     );
@@ -130,9 +180,16 @@ export default function ChannelPage() {
         </div>
       )}
 
-      <hr className="my-6 border-border" />
+      <div className="mt-6 flex gap-1 border-b border-border">
+        <TabButton active={tab === "videos"} onClick={() => setTab("videos")}>
+          Videos
+        </TabButton>
+        <TabButton active={tab === "posts"} onClick={() => setTab("posts")}>
+          Posts
+        </TabButton>
+      </div>
 
-      {videosBody}
+      <div className="mt-6">{tab === "videos" ? videosBody : postsBody}</div>
     </main>
   );
 }

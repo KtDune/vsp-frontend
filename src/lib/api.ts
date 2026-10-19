@@ -25,6 +25,19 @@ export type ProfileUser = {
   createdAt: string | null;
 };
 
+export type Post = {
+  id: number;
+  userId: number;
+  content: string | null;
+  visibility: string;
+  isEdited: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+  imageUrls: string[];
+  authorUsername: string;
+  authorProfileUrl: string | null;
+};
+
 const PAGE_SIZE = 20;
 
 export async function fetchVideoPage(
@@ -91,4 +104,17 @@ export async function searchUsers(name: string): Promise<ProfileUser[]> {
   });
   const data = res.data;
   return Array.isArray(data) ? data : [];
+}
+
+export async function fetchPosts(
+  opts: { userId?: number; username?: string } = {},
+): Promise<Post[]> {
+  const res = await http.get<{ success: boolean; posts?: { content?: Post[] } }>("/posts", {
+    params: {
+      ...(opts.userId != null ? { userId: opts.userId } : {}),
+      ...(opts.username ? { username: opts.username } : {}),
+    },
+  });
+  const content = res.data.posts?.content;
+  return Array.isArray(content) ? content : [];
 }
