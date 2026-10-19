@@ -61,6 +61,22 @@ export async function fetchUserByName(username: string): Promise<ProfileUser> {
   return user;
 }
 
+export type SubscriptionStatus = "none" | "pending" | "subscribed";
+
+export async function fetchSubscriptionStatus(channelId: number): Promise<SubscriptionStatus> {
+  const res = await http.get<{ success: boolean; status?: string }>(
+    `/users/${channelId}/subscription-status`,
+  );
+  switch (res.data.status) {
+    case "PENDING":
+      return "pending";
+    case "APPROVED":
+      return "subscribed";
+    default:
+      return "none";
+  }
+}
+
 export async function subscribe(channelId: number): Promise<void> {
   await http.post(`/users/${channelId}/subscribe`, {});
 }

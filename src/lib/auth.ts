@@ -53,9 +53,13 @@ export async function register(values: RegisterValues): Promise<void> {
 }
 
 export async function login(email: string, password: string): Promise<string | null> {
-  const res = await http.post<{ token?: string; accessToken?: string }>("/auth/login", {
+  const res = await http.post<{ accessToken?: string }>("/auth/login", {
     email: email.trim().toLowerCase(),
     password,
   });
-  return res.data.token ?? res.data.accessToken ?? null;
+  return res.data.accessToken ?? null;
+}
+
+export async function logout(): Promise<void> {
+  await http.post("/auth/logout");
 }

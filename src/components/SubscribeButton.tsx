@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { subscribe, unsubscribe } from "../lib/api";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
+import { fetchSubscriptionStatus, subscribe, unsubscribe, type SubscriptionStatus } from "../lib/api";
 
-type Status = "none" | "pending" | "subscribed";
-
-const label: Record<Status, string> = {
+const label: Record<SubscriptionStatus, string> = {
   none: "Subscribe",
   pending: "Requested",
   subscribed: "Subscribed",
@@ -16,16 +16,40 @@ export default function SubscribeButton({
   channelId: number;
   isPrivate: boolean;
 }) {
-  const [status, setStatus] = useState<Status>("none");
+  const { accessToken } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [status, setStatus] = useState<SubscriptionStatus>("none");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+
+  const loggedIn = accessToken != null;
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    let cancelled = false;
+    fetchSubscriptionStatus(channelId)
+      .then((s) => {
+        if (!cancelled) setStatus(s);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, loggedIn]);
+
+  const goToLogin = () => {
+    const next = encodeURIComponent(location.pathname + location.search);
+    navigate(`/login?next=${next}`);
+  };
 
   const toggle = async () => {
     if (busy) return;
     setBusy(true);
     setFailure(null);
 
-    const next: Status =
+    const next: SubscriptionStatus =
       status === "none" ? (isPrivate ? "pending" : "subscribed") : "none";
     const previous = status;
     setStatus(next);
@@ -51,7 +75,7 @@ export default function SubscribeButton({
   return (
     <div>
       <button
-        onClick={toggle}
+        onClick={loggedIn ? toggle : goToLogin}
         disabled={busy}
         className={`cursor-pointer rounded-full px-5 py-2 text-sm font-semibold transition disabled:opacity-50 ${
           active
@@ -59,7 +83,7 @@ export default function SubscribeButton({
             : "bg-accent text-white hover:opacity-90"
         }`}
       >
-        {label[status]}
+        {loggedIn ? label[status] : "Login to Subscribe"}
       </button>
       {failure && <p className="mt-2 text-xs text-red-400">{failure}</p>}
     </div>

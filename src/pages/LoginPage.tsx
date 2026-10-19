@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { login } from "../lib/auth";
-import { setAccessToken } from "../lib/token";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
+import { validateEmail, validatePassword } from "../lib/auth";
 
 type Errors = Partial<Record<"email" | "password", string>>;
 
@@ -12,14 +12,22 @@ export default function LoginPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  const nextPath = (() => {
+    const next = searchParams.get("next");
+    if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+    return null;
+  })();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
 
     const next: Errors = {
-      email: email.trim() ? undefined : "Email is required",
-      password: password ? undefined : "Password is required",
+      email: validateEmail(email.trim()),
+      password: validatePassword(password),
     };
     setErrors(next);
     if (next.email || next.password) return;
@@ -28,9 +36,8 @@ export default function LoginPage() {
     setFailure(null);
 
     try {
-      const token = await login(email, password);
-      setAccessToken(token);
-      navigate("/");
+      await login(email, password);
+      navigate(nextPath ?? "/");
     } catch {
       setFailure("Invalid email or password");
     } finally {

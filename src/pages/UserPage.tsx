@@ -1,13 +1,18 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { mockUser, defaultAvatar } from "../data/user";
-import SubscribeButton from "../components/SubscribeButton";
+import { useAuth } from "../auth/useAuth";
+import { defaultAvatar } from "../data/user";
+import { fetchUser, type ProfileUser } from "../lib/api";
+import { getAuthUser } from "../lib/token";
 
-const formattedDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+const formattedDate = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "—";
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -20,42 +25,94 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+function NotLoggedIn() {
+  return (
+    <main className="mx-auto max-w-2xl px-4 pt-24 pb-10">
+      <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
+        <h1 className="text-xl font-bold">Not logged in</h1>
+        <p className="mt-2 text-sm text-text-dim">Log in to see your profile.</p>
+        <Link
+          to="/login"
+          className="mt-4 inline-block rounded-full border border-border bg-accent px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Log in
+        </Link>
+      </div>
+    </main>
+  );
+}
+
 export default function UserPage() {
-  const user = mockUser;
+  const { accessToken } = useAuth();
+  const identity = getAuthUser();
+  const [state, setState] = useState<{
+    userId: number;
+    profile: ProfileUser | null;
+    failed: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const me = getAuthUser();
+    if (accessToken == null || !me) return;
+
+    let cancelled = false;
+
+    fetchUser(me.id)
+      .then((user) => {
+        if (!cancelled) setState({ userId: me.id, profile: user, failed: false });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ userId: me.id, profile: null, failed: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  if (accessToken == null || !identity) {
+    return <NotLoggedIn />;
+  }
+
+  const fresh = state?.userId === identity.id ? state : null;
+  const profile = fresh?.profile ?? null;
+  const failed = fresh?.failed ?? false;
+  const name = profile?.username ?? identity.username;
+  const visibility = profile ? (profile.visibility ?? "PRIVATE") : null;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-24 pb-10">
       <div className="rounded-2xl border border-border bg-surface p-6 sm:p-8">
         <div className="flex items-center gap-5">
           <img
-            src={user.avatar ?? defaultAvatar}
+            src={profile?.profileUrl ?? defaultAvatar}
             alt="Avatar"
             className="h-20 w-20 rounded-full ring-2 ring-accent"
           />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">{user.name}</h1>
+            <h1 className="truncate text-2xl font-bold">{name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                  user.visibility === "PUBLIC"
-                    ? "bg-accent/15 text-accent"
-                    : "bg-text-dim/15 text-text-dim"
-                }`}
-              >
-                {user.visibility === "PUBLIC" ? "Public account" : "Private account"}
-              </span>
+              {visibility && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    visibility === "PUBLIC"
+                      ? "bg-accent/15 text-accent"
+                      : "bg-text-dim/15 text-text-dim"
+                  }`}
+                >
+                  {visibility === "PUBLIC" ? "Public account" : "Private account"}
+                </span>
+              )}
+              {failed && <span className="text-xs text-text-dim">Failed to load profile</span>}
             </div>
-          </div>
-          <div className="ml-auto shrink-0">
-            <SubscribeButton channelId={user.id} isPrivate={user.visibility === "PRIVATE"} />
           </div>
         </div>
 
         <hr className="my-6 border-border" />
 
         <dl>
-          <Detail label="Email" value={user.email} />
-          <Detail label="Joined" value={formattedDate(user.joinedAt)} />
+          <Detail label="Email" value={identity.email} />
+          <Detail label="Joined" value={formattedDate(profile?.createdAt ?? null)} />
         </dl>
       </div>
 
