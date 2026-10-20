@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, Search, X } from "lucide-react";
 import { useAuth } from "../auth/useAuth";
 import { defaultAvatar } from "../data/user";
 
 export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -25,9 +27,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           onClick={onMenuClick}
           className="cursor-pointer rounded-full p-2 hover:bg-surface-hover"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
-          </svg>
+          <Menu size={20} />
         </button>
         <a href="/" className="flex items-center gap-2 font-bold tracking-wide">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-sm font-black text-white">
@@ -46,22 +46,35 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           search();
         }}
       >
-        <input
-          type="search"
-          placeholder="Search videos"
-          aria-label="Search videos"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-10 w-full rounded-l-full border border-border bg-surface px-4 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
-        />
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search videos"
+            aria-label="Search videos"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-10 w-full rounded-l-full border border-border bg-surface px-4 pr-9 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-text-dim transition hover:text-text"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
         <button
           aria-label="Search"
           className="flex h-10 cursor-pointer items-center justify-center rounded-r-full border border-l-0 border-border bg-surface-hover px-4 text-text hover:bg-border"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
+          <Search size={18} />
         </button>
       </form>
 
@@ -70,10 +83,7 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
         onClick={search}
         className="cursor-pointer rounded-full p-2 hover:bg-surface-hover sm:hidden"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
+        <Search size={20} />
       </button>
 
       {hasToken ? (

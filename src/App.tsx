@@ -10,6 +10,7 @@ import SignupPage from "./pages/SignupPage";
 import UserPage from "./pages/UserPage";
 import UserSearchPage from "./pages/UserSearchPage";
 import VideoSearchPage from "./pages/VideoSearchPage";
+import WatchPage from "./pages/WatchPage";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -23,6 +24,7 @@ export default function App() {
 
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/watch/:id" element={<WatchPage />} />
           <Route path="/me" element={<UserPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />

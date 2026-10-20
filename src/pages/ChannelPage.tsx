@@ -139,7 +139,13 @@ export default function ChannelPage() {
     postsBody = (
       <div className="mx-auto flex max-w-2xl flex-col gap-3">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard
+            key={post.id}
+            post={post}
+            onDeleted={(id) =>
+              setPosts((prev) => (prev ? prev.filter((p) => p.id !== id) : prev))
+            }
+          />
         ))}
       </div>
     );

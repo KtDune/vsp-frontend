@@ -1,27 +1,10 @@
 import { Link } from "react-router-dom";
 import type { Video } from "../lib/api";
-import { formatTimeAgo } from "../lib/format";
+import { formatDuration, formatTimeAgo, formatViews } from "../lib/format";
 import { defaultAvatar } from "../data/user";
 
 const thumbnailFallback =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%2316181d'/%3E%3C/svg%3E";
-
-function formatViews(views: number): string {
-  return views >= 1_000_000
-    ? `${(views / 1_000_000).toFixed(1)}M views`
-    : views >= 1_000
-      ? `${Math.round(views / 1_000)}K views`
-      : `${views} views`;
-}
-
-function formatDuration(seconds: number | null): string {
-  if (seconds == null) return "";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
-  return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
-}
 
 export default function VideoCard({ video }: { video: Video }) {
   return (

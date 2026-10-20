@@ -164,7 +164,17 @@ export default function UserPage() {
               <p className="py-6 text-center text-sm text-text-dim">No posts yet.</p>
             )}
             {posts?.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard
+                key={post.id}
+                post={post}
+                onDeleted={(id) =>
+                  setPostsState((prev) =>
+                    prev && prev.userId === meId
+                      ? { ...prev, posts: prev.posts.filter((p) => p.id !== id) }
+                      : prev,
+                  )
+                }
+              />
             ))}
           </div>
         )}

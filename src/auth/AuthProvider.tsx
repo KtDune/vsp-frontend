@@ -6,11 +6,12 @@ import { AuthContext, type AuthContextValue } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setTokenState] = useState<string | null>(getAccessToken());
+  const [ready, setReady] = useState(false);
 
   useEffect(() => subscribeAccessToken(setTokenState), []);
 
   useEffect(() => {
-    refreshAccessToken();
+    refreshAccessToken().finally(() => setReady(true));
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -25,8 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ accessToken, login, logout }),
-    [accessToken, login, logout],
+    () => ({ accessToken, ready, login, logout }),
+    [accessToken, ready, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

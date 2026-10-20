@@ -17,6 +17,22 @@ export type VideoSlice = {
   last: boolean;
 };
 
+export type VideoDetail = {
+  id: number;
+  userId: number;
+  title: string;
+  description: string | null;
+  visibility: "PUBLIC" | "PRIVATE";
+  thumbnailUrl: string | null;
+  videoUrl: string;
+  duration: number | null;
+  viewCount: number;
+  createdAt: string;
+  channelName: string;
+  channelAvatarUrl: string | null;
+  commentsDisabled: boolean | null;
+};
+
 export type ProfileUser = {
   id: number;
   username: string;
@@ -129,6 +145,124 @@ export async function searchUsers(name: string): Promise<ProfileUser[]> {
   });
   const data = res.data;
   return Array.isArray(data) ? data : [];
+}
+
+export async function fetchVideo(id: number): Promise<VideoDetail> {
+  const res = await http.get<{ success: boolean; video?: VideoDetail }>(`/videos/${id}`);
+  const video = res.data.video;
+  if (!video) throw new Error("Video not found or private");
+  return video;
+}
+
+export type LikeStatus = {
+  likedByMe: boolean;
+  likeCount: number;
+};
+
+export async function fetchVideoLikeStatus(id: number): Promise<LikeStatus> {
+  const res = await http.get<{ success: boolean; likedByMe?: boolean; likeCount?: number }>(
+    `/videos/${id}/like-status`,
+  );
+  return { likedByMe: res.data.likedByMe ?? false, likeCount: res.data.likeCount ?? 0 };
+}
+
+export async function likeVideo(id: number): Promise<void> {
+  await http.post(`/videos/${id}/like`, {});
+}
+
+export async function unlikeVideo(id: number): Promise<void> {
+  await http.delete(`/videos/${id}/like`);
+}
+
+export async function fetchCommentLikeStatus(id: number): Promise<LikeStatus> {
+  const res = await http.get<{ success: boolean; likedByMe?: boolean; likeCount?: number }>(
+    `/comments/${id}/like-status`,
+  );
+  return { likedByMe: res.data.likedByMe ?? false, likeCount: res.data.likeCount ?? 0 };
+}
+
+export async function likeComment(id: number): Promise<void> {
+  await http.post(`/comments/${id}/like`, {});
+}
+
+export async function unlikeComment(id: number): Promise<void> {
+  await http.delete(`/comments/${id}/like`);
+}
+
+export type Comment = {
+  id: number;
+  userId: number;
+  videoId: number | null;
+  postId: number | null;
+  parentId: number | null;
+  content: string;
+  isEdited: boolean;
+  createdAt: string | null;
+  replyCount: number | null;
+  authorUsername: string;
+  authorProfileUrl: string | null;
+};
+
+export type CommentSlice = {
+  content: Comment[];
+  last: boolean;
+};
+
+export async function fetchVideoComments(videoId: number, page: number): Promise<CommentSlice> {
+  const res = await http.get<{ success: boolean; comments?: CommentSlice }>("/comments", {
+    params: { videoId, page, size: PAGE_SIZE },
+  });
+  return res.data.comments ?? { content: [], last: true };
+}
+
+export async function fetchCommentReplies(commentId: number, page: number): Promise<CommentSlice> {
+  const res = await http.get<{ success: boolean; replies?: CommentSlice }>(
+    `/comments/${commentId}/replies`,
+    { params: { page, size: PAGE_SIZE } },
+  );
+  return res.data.replies ?? { content: [], last: true };
+}
+
+export async function addComment(body: {
+  videoId: number;
+  content: string;
+  parentId?: number;
+}): Promise<number> {
+  const res = await http.post<{ success: boolean; id?: number }>("/comments", body);
+  return res.data.id ?? 0;
+}
+
+export async function editComment(id: number, content: string): Promise<void> {
+  await http.put(`/comments/${id}`, { content });
+}
+
+export async function deleteComment(id: number): Promise<void> {
+  await http.delete(`/comments/${id}`);
+}
+
+export type VideoUpdate = {
+  title?: string;
+  description?: string | null;
+  visibility?: "PUBLIC" | "PRIVATE";
+};
+
+export async function updateVideo(id: number, changes: VideoUpdate): Promise<void> {
+  await http.put(`/videos/${id}`, changes);
+}
+
+export async function deleteVideo(id: number): Promise<void> {
+  await http.delete(`/videos/${id}`);
+}
+
+export async function updatePost(
+  id: number,
+  changes: { content?: string },
+): Promise<void> {
+  await http.put(`/posts/${id}`, changes);
+}
+
+export async function deletePost(id: number): Promise<void> {
+  await http.delete(`/posts/${id}`);
 }
 
 export async function fetchPosts(
