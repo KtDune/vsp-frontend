@@ -1,14 +1,40 @@
-import { useState } from "react";
-import type { Post } from "../lib/api";
-import { deletePost, updatePost } from "../lib/api";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { MessageSquare, ThumbsUp } from "lucide-react";
+import type { Post, LikeStatus } from "../lib/api";
+import {
+  deletePost,
+  fetchPostLikeStatus,
+  likePost,
+  unlikePost,
+  updatePost,
+} from "../lib/api";
 import { formatTimeAgo } from "../lib/format";
 import { defaultAvatar } from "../data/user";
 import { useAuth } from "../auth/useAuth";
 import { getAuthUser } from "../lib/token";
 import OwnerMenu from "./OwnerMenu";
 
-export default function PostCard({ post, onDeleted }: { post: Post; onDeleted?: (id: number) => void }) {
-  const { accessToken } = useAuth();
+function formatCount(count: number): string {
+  return count >= 1_000_000
+    ? `${(count / 1_000_000).toFixed(1)}M`
+    : count >= 1_000
+      ? `${Math.round(count / 1_000)}K`
+      : String(count);
+}
+
+export default function PostCard({
+  post,
+  onDeleted,
+  showCommentsButton = true,
+}: {
+  post: Post;
+  onDeleted?: (id: number) => void;
+  showCommentsButton?: boolean;
+}) {
+  const { accessToken, ready } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const identity = accessToken != null ? getAuthUser() : null;
   const isOwner = identity?.id === post.userId;
 
@@ -19,6 +45,49 @@ export default function PostCard({ post, onDeleted }: { post: Post; onDeleted?: 
   const [editText, setEditText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [like, setLike] = useState<LikeStatus | null>(null);
+  const [likeBusy, setLikeBusy] = useState(false);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    fetchPostLikeStatus(post.id)
+      .then((s) => {
+        if (!cancelled) setLike(s);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, ready]);
+
+  const toggleLike = async () => {
+    if (likeBusy) return;
+    if (!identity) {
+      navigate(`/login?next=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+    if (!like) return;
+    setLikeBusy(true);
+    const previous = like;
+    const next = {
+      likedByMe: !previous.likedByMe,
+      likeCount: previous.likeCount + (previous.likedByMe ? -1 : 1),
+    };
+    setLike(next);
+    try {
+      if (next.likedByMe) {
+        await likePost(post.id);
+      } else {
+        await unlikePost(post.id);
+      }
+    } catch {
+      setLike(previous);
+    } finally {
+      setLikeBusy(false);
+    }
+  };
 
   const images = post.imageUrls ?? [];
   const hasImages = images.length > 0;
@@ -113,7 +182,7 @@ export default function PostCard({ post, onDeleted }: { post: Post; onDeleted?: 
             rows={3}
             maxLength={1000}
             placeholder="Post text…"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+            className="w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
           />
           <div className="mt-1.5 flex justify-end gap-2">
             <button
@@ -162,6 +231,31 @@ export default function PostCard({ post, onDeleted }: { post: Post; onDeleted?: 
         {post.createdAt ? formatTimeAgo(post.createdAt) : "—"}
         {(edited || post.isEdited) && " · Edited"}
       </p>
+
+      <div className="mt-2 flex items-center gap-4 border-t border-border pt-2">
+        <button
+          onClick={toggleLike}
+          disabled={likeBusy}
+          className={`flex cursor-pointer items-center gap-1.5 text-sm font-semibold transition disabled:opacity-60 ${
+            like?.likedByMe ? "text-accent" : "text-text-dim hover:text-text"
+          }`}
+        >
+          <ThumbsUp
+            className="h-4 w-4"
+            fill={like?.likedByMe ? "currentColor" : "none"}
+          />
+          {like != null ? formatCount(like.likeCount) : "…"}
+        </button>
+        {showCommentsButton && (
+          <button
+            onClick={() => navigate(`/posts/${post.id}`)}
+            className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-text-dim transition hover:text-text"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Comments
+          </button>
+        )}
+      </div>
     </article>
   );
 }

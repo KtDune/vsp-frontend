@@ -60,7 +60,6 @@ export default function CreateVideoPage() {
   const [busy, setBusy] = useState<Tab | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [postPublished, setPostPublished] = useState(false);
   const [duration, setDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -162,7 +161,6 @@ export default function CreateVideoPage() {
     e.preventDefault();
     if (busy || file == null) return;
     setSubmitError(null);
-    setPostPublished(false);
     setBusy("video");
     setUploadProgress(0);
     try {
@@ -187,7 +185,6 @@ export default function CreateVideoPage() {
     e.preventDefault();
     if (busy || (postText.trim().length === 0 && postImages.length === 0)) return;
     setSubmitError(null);
-    setPostPublished(false);
     setBusy("post");
     setUploadProgress(0);
     try {
@@ -197,12 +194,9 @@ export default function CreateVideoPage() {
         imageUrls,
         visibility: "PUBLIC",
       });
-      setPostText("");
-      setPostImages([]);
-      setPostPublished(true);
+      navigate("/me");
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Something went wrong");
-    } finally {
       setBusy(null);
     }
   };
@@ -457,7 +451,6 @@ export default function CreateVideoPage() {
               {busy === "post" ? `Uploading… ${uploadProgress}%` : "Upload"}
             </button>
             {submitError && <p className="text-xs text-red-400">{submitError}</p>}
-            {postPublished && <p className="text-xs text-emerald-400">Post published</p>}
           </form>
         )}
       </div>

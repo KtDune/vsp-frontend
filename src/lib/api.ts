@@ -176,6 +176,47 @@ export async function fetchMySubscriptions(): Promise<MySubscriptions> {
   };
 }
 
+export type SubscriptionRequest = {
+  id: number;
+  subscriberId: number;
+  channelId: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string | null;
+  subscriberUsername: string | null;
+  subscriberProfileUrl: string | null;
+};
+
+export async function fetchSubscriptionRequests(
+  userId: number,
+  page: number = 0,
+): Promise<SubscriptionRequest[]> {
+  const res = await http.get<{ success: boolean; requests?: SubscriptionRequest[] }>(
+    `/users/${userId}/subscription-requests`,
+    { params: { page, size: PAGE_SIZE } },
+  );
+  return res.data.requests ?? [];
+}
+
+export async function approveSubscription(id: number): Promise<void> {
+  const res = await http.post<{ success: boolean; message?: string }>(
+    `/subscriptions/${id}/approve`,
+    {},
+  );
+  if (!res.data.success) {
+    throw new Error(res.data.message ?? "Could not approve the request");
+  }
+}
+
+export async function rejectSubscription(id: number): Promise<void> {
+  const res = await http.post<{ success: boolean; message?: string }>(
+    `/subscriptions/${id}/reject`,
+    {},
+  );
+  if (!res.data.success) {
+    throw new Error(res.data.message ?? "Could not reject the request");
+  }
+}
+
 export async function fetchVideoPage(
   page: number,
   title?: string,
@@ -278,6 +319,21 @@ export async function unlikeVideo(id: number): Promise<void> {
   await http.delete(`/videos/${id}/like`);
 }
 
+export async function fetchPostLikeStatus(id: number): Promise<LikeStatus> {
+  const res = await http.get<{ success: boolean; likedByMe?: boolean; likeCount?: number }>(
+    `/posts/${id}/like-status`,
+  );
+  return { likedByMe: res.data.likedByMe ?? false, likeCount: res.data.likeCount ?? 0 };
+}
+
+export async function likePost(id: number): Promise<void> {
+  await http.post(`/posts/${id}/like`, {});
+}
+
+export async function unlikePost(id: number): Promise<void> {
+  await http.delete(`/posts/${id}/like`);
+}
+
 export async function fetchCommentLikeStatus(id: number): Promise<LikeStatus> {
   const res = await http.get<{ success: boolean; likedByMe?: boolean; likeCount?: number }>(
     `/comments/${id}/like-status`,
@@ -319,6 +375,13 @@ export async function fetchVideoComments(videoId: number, page: number): Promise
   return res.data.comments ?? { content: [], last: true };
 }
 
+export async function fetchPostComments(postId: number, page: number): Promise<CommentSlice> {
+  const res = await http.get<{ success: boolean; comments?: CommentSlice }>("/comments", {
+    params: { postId, page, size: PAGE_SIZE },
+  });
+  return res.data.comments ?? { content: [], last: true };
+}
+
 export async function fetchCommentReplies(commentId: number, page: number): Promise<CommentSlice> {
   const res = await http.get<{ success: boolean; replies?: CommentSlice }>(
     `/comments/${commentId}/replies`,
@@ -328,7 +391,8 @@ export async function fetchCommentReplies(commentId: number, page: number): Prom
 }
 
 export async function addComment(body: {
-  videoId: number;
+  videoId?: number;
+  postId?: number;
   content: string;
   parentId?: number;
 }): Promise<number> {
@@ -380,4 +444,11 @@ export async function fetchPosts(
   });
   const content = res.data.posts?.content;
   return Array.isArray(content) ? content : [];
+}
+
+export async function fetchPost(id: number): Promise<Post> {
+  const res = await http.get<{ success: boolean; post?: Post }>(`/posts/${id}`);
+  const post = res.data.post;
+  if (!post) throw new Error("Post not found or private");
+  return post;
 }

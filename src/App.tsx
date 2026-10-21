@@ -9,6 +9,7 @@ import ChannelPage from "./pages/ChannelPage";
 import CreateVideoPage from "./pages/CreateVideoPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import PostPage from "./pages/PostPage";
 import SignupPage from "./pages/SignupPage";
 import UserPage from "./pages/UserPage";
 import UserSearchPage from "./pages/UserSearchPage";
@@ -28,6 +29,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/watch/:id" element={<WatchPage />} />
+          <Route path="/posts/:id" element={<PostPage />} />
           <Route path="/me" element={<UserPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
