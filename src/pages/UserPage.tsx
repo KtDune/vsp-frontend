@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import PostCard from "../components/PostCard";
 import TabButton from "../components/TabButton";
+import VideoCard from "../components/VideoCard";
 import { defaultAvatar } from "../data/user";
-import { fetchUser, fetchPosts, type Post, type ProfileUser } from "../lib/api";
+import { fetchUser, fetchPosts, fetchVideoPage, type Post, type ProfileUser, type Video } from "../lib/api";
 import { getAuthUser } from "../lib/token";
 
 const formattedDate = (iso: string | null) =>
@@ -26,6 +27,16 @@ function Detail({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+type UploadItem =
+  | { kind: "video"; date: string; video: Video }
+  | { kind: "post"; date: string; post: Post };
+
+const mergeUploads = (videos: Video[], posts: Post[]): UploadItem[] =>
+  [
+    ...videos.map((video) => ({ kind: "video" as const, date: video.createdAt, video })),
+    ...posts.map((post) => ({ kind: "post" as const, date: post.createdAt ?? "", post })),
+  ].sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0));
 
 function NotLoggedIn() {
   return (
@@ -52,32 +63,45 @@ export default function UserPage() {
     profile: ProfileUser | null;
     failed: boolean;
   } | null>(null);
-  const [tab, setTab] = useState<"details" | "posts">("details");
-  const [postsState, setPostsState] = useState<{
+  const [tab, setTab] = useState<"details" | "uploads">("details");
+  const [uploadsState, setUploadsState] = useState<{
     userId: number;
-    posts: Post[];
+    uploads: UploadItem[] | null;
     failed: boolean;
   } | null>(null);
 
   const meId = identity?.id;
+  const username = identity?.username;
 
   useEffect(() => {
-    if (tab !== "posts" || accessToken == null || meId == null) return;
+    if (tab !== "uploads" || accessToken == null || meId == null || username == null) return;
 
     let cancelled = false;
 
-    fetchPosts({ userId: meId })
-      .then((posts) => {
-        if (!cancelled) setPostsState({ userId: meId, posts, failed: false });
+    const videosPromise = (async () => {
+      const all: Video[] = [];
+      for (let page = 0; ; page += 1) {
+        const slice = await fetchVideoPage(page, undefined, { username });
+        all.push(...slice.content);
+        if (slice.last) break;
+      }
+      return all;
+    })();
+
+    Promise.all([fetchPosts({ username }), videosPromise])
+      .then(([posts, videos]) => {
+        if (!cancelled) {
+          setUploadsState({ userId: meId, uploads: mergeUploads(videos, posts), failed: false });
+        }
       })
       .catch(() => {
-        if (!cancelled) setPostsState({ userId: meId, posts: [], failed: true });
+        if (!cancelled) setUploadsState({ userId: meId, uploads: null, failed: true });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [tab, accessToken, meId]);
+  }, [tab, accessToken, meId, username]);
 
   useEffect(() => {
     const me = getAuthUser();
@@ -107,8 +131,8 @@ export default function UserPage() {
   const failed = fresh?.failed ?? false;
   const name = profile?.username ?? identity.username;
   const visibility = profile ? (profile.visibility ?? "PRIVATE") : null;
-  const posts = postsState?.userId === identity.id ? postsState.posts : null;
-  const postsFailed = postsState?.userId === identity.id ? postsState.failed : false;
+  const uploads = uploadsState?.userId === identity.id ? uploadsState.uploads : null;
+  const uploadsFailed = uploadsState?.userId === identity.id ? uploadsState.failed : false;
 
   return (
     <main className="mx-auto max-w-2xl px-4 pt-24 pb-10">
@@ -142,8 +166,8 @@ export default function UserPage() {
           <TabButton active={tab === "details"} onClick={() => setTab("details")}>
             Details
           </TabButton>
-          <TabButton active={tab === "posts"} onClick={() => setTab("posts")}>
-            {`Posts${posts != null ? ` (${posts.length})` : ""}`}
+          <TabButton active={tab === "uploads"} onClick={() => setTab("uploads")}>
+            {`Uploads${uploads != null ? ` (${uploads.length})` : ""}`}
           </TabButton>
         </div>
 
@@ -154,28 +178,37 @@ export default function UserPage() {
           </dl>
         ) : (
           <div className="mt-4 flex flex-col gap-3">
-            {posts == null && !postsFailed && (
-              <p className="py-6 text-center text-sm text-text-dim">Loading posts…</p>
+            {uploads == null && !uploadsFailed && (
+              <p className="py-6 text-center text-sm text-text-dim">Loading uploads…</p>
             )}
-            {postsFailed && (
-              <p className="py-6 text-center text-sm text-text-dim">Failed to load posts.</p>
+            {uploadsFailed && (
+              <p className="py-6 text-center text-sm text-text-dim">Failed to load uploads.</p>
             )}
-            {posts != null && posts.length === 0 && (
-              <p className="py-6 text-center text-sm text-text-dim">No posts yet.</p>
+            {uploads != null && uploads.length === 0 && (
+              <p className="py-6 text-center text-sm text-text-dim">No uploads yet.</p>
             )}
-            {posts?.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onDeleted={(id) =>
-                  setPostsState((prev) =>
-                    prev && prev.userId === meId
-                      ? { ...prev, posts: prev.posts.filter((p) => p.id !== id) }
-                      : prev,
-                  )
-                }
-              />
-            ))}
+            {uploads?.map((item) =>
+              item.kind === "video" ? (
+                <VideoCard key={`video-${item.video.id}`} video={item.video} />
+              ) : (
+                <PostCard
+                  key={`post-${item.post.id}`}
+                  post={item.post}
+                  onDeleted={(id) =>
+                    setUploadsState((prev) =>
+                      prev && prev.userId === meId && prev.uploads != null
+                        ? {
+                            ...prev,
+                            uploads: prev.uploads.filter(
+                              (entry) => !(entry.kind === "post" && entry.post.id === id),
+                            ),
+                          }
+                        : prev,
+                    )
+                  }
+                />
+              ),
+            )}
           </div>
         )}
       </div>

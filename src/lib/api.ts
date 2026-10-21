@@ -1,3 +1,4 @@
+import { isAxiosError } from "axios";
 import { http } from "./http";
 
 export type Video = {
@@ -56,6 +57,100 @@ export type Post = {
 
 const PAGE_SIZE = 20;
 
+type UploadResponse = {
+  success: boolean;
+  url?: string;
+  message?: string;
+};
+
+function toUploadForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+}
+
+function uploadProgressHandler(onProgress?: (percent: number) => void) {
+  if (!onProgress) return undefined;
+  return (event: { loaded: number; total?: number }) => {
+    if (event.total) onProgress(Math.round((event.loaded / event.total) * 100));
+  };
+}
+
+function requireUploadUrl(data: UploadResponse): string {
+  if (!data.success || !data.url) {
+    throw new Error(data.message ?? "Upload failed");
+  }
+  return data.url;
+}
+
+export async function uploadVideo(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<string> {
+  try {
+    const res = await http.post<UploadResponse>("/uploads/videos", toUploadForm(file), {
+      timeout: 0,
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: uploadProgressHandler(onProgress),
+    });
+    return requireUploadUrl(res.data);
+  } catch (err) {
+    throw toError(err, "Upload failed");
+  }
+}
+
+export async function uploadImage(
+  file: File,
+  kind: "image" | "avatar" = "image",
+  onProgress?: (percent: number) => void,
+): Promise<string> {
+  const endpoint = kind === "avatar" ? "/uploads/avatars" : "/uploads/images";
+  try {
+    const res = await http.post<UploadResponse>(endpoint, toUploadForm(file), {
+      timeout: 0,
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: uploadProgressHandler(onProgress),
+    });
+    return requireUploadUrl(res.data);
+  } catch (err) {
+    throw toError(err, "Upload failed");
+  }
+}
+
+export async function createVideo(body: {
+  title: string;
+  description?: string | null;
+  visibility: "PUBLIC" | "PRIVATE";
+  videoUrl: string;
+  thumbnailUrl?: string | null;
+  duration?: number | null;
+}): Promise<number> {
+  try {
+    const res = await http.post<{ success: boolean; id?: number; message?: string }>("/videos", body);
+    if (!res.data.success || !res.data.id) {
+      throw new Error(res.data.message ?? "Could not create the video");
+    }
+    return res.data.id;
+  } catch (err) {
+    throw toError(err, "Could not create the video");
+  }
+}
+
+export async function createPost(body: {
+  content?: string | null;
+  imageUrls?: string[];
+  visibility?: string;
+}): Promise<void> {
+  try {
+    const res = await http.post<{ success: boolean; message?: string }>("/posts", body);
+    if (!res.data.success) {
+      throw new Error(res.data.message ?? "Could not publish the post");
+    }
+  } catch (err) {
+    throw toError(err, "Could not publish the post");
+  }
+}
+
 export type SubscribedChannel = {
   id: number;
   channelId: number;
@@ -98,6 +193,15 @@ export async function fetchVideoPage(
   const slice = res.data.videos ?? (res.data as unknown as VideoSlice);
   return slice ?? { content: [], last: true };
 }
+
+const toError = (err: unknown, fallback: string): Error => {
+  if (isAxiosError(err)) {
+    const message = (err.response?.data as { message?: string } | undefined)?.message;
+    if (message) return new Error(message);
+  }
+  if (err instanceof Error && err.message) return err;
+  return new Error(fallback);
+};
 
 export async function fetchUser(id: number): Promise<ProfileUser> {
   const res = await http.get<{ success: boolean; user?: ProfileUser }>(`/users/${id}`);

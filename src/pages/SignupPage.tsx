@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
 import { register, validateRegister, type RegisterValues, type Visibility } from "../lib/auth";
 
 const emptyValues: RegisterValues = {
@@ -16,9 +17,9 @@ export default function SignupPage() {
   const [values, setValues] = useState<RegisterValues>(emptyValues);
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const set = (field: FieldName, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
@@ -44,14 +45,21 @@ export default function SignupPage() {
         reEnterPassword: values.reEnterPassword,
         visibility: values.visibility,
       });
-      setSuccess(true);
-      setTimeout(() => navigate("/login"), 1200);
     } catch (err) {
-      const message =
+      setFailure(
         err instanceof Error && err.message
           ? err.message
-          : "Could not create the account. Check the fields and try again.";
-      setFailure(message);
+          : "Could not create the account. Check the fields and try again.",
+      );
+      setBusy(false);
+      return;
+    }
+
+    try {
+      await login(values.email.trim().toLowerCase(), values.password);
+      navigate("/");
+    } catch {
+      setFailure("Account created. Please log in to continue.");
     } finally {
       setBusy(false);
     }
@@ -65,20 +73,6 @@ export default function SignupPage() {
       </Link>
     </p>
   );
-
-  if (success) {
-    return (
-      <main className="flex justify-center px-4 pt-28 pb-16">
-        <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-border bg-surface p-8 text-center">
-            <h1 className="text-xl font-bold">Account created</h1>
-            <p className="mt-2 text-sm text-text-dim">Take a moment — redirecting you to sign in.</p>
-          </div>
-          {loginHint}
-        </div>
-      </main>
-    );
-  }
 
   const serverFailure = failure && !Object.keys(errors).some(Boolean);
 
