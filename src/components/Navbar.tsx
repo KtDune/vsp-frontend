@@ -42,8 +42,8 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
           <input
             autoFocus
             type="text"
-            placeholder="Search videos"
-            aria-label="Search videos"
+            placeholder="Search videos or channels"
+            aria-label="Search videos or channels"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-10 min-w-0 flex-1 rounded-full border border-border bg-surface px-4 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"
@@ -90,8 +90,8 @@ export default function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search videos"
-                aria-label="Search videos"
+                placeholder="Search videos or channels"
+                aria-label="Search videos or channels"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="h-10 w-full rounded-l-full border border-border bg-surface px-4 pr-9 text-sm text-text outline-none placeholder:text-text-dim focus:border-accent"

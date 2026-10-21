@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { useAuth } from "./auth/useAuth";
@@ -10,10 +10,9 @@ import CreateVideoPage from "./pages/CreateVideoPage";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import PostPage from "./pages/PostPage";
+import SearchPage from "./pages/SearchPage";
 import SignupPage from "./pages/SignupPage";
 import UserPage from "./pages/UserPage";
-import UserSearchPage from "./pages/UserSearchPage";
-import VideoSearchPage from "./pages/VideoSearchPage";
 import WatchPage from "./pages/WatchPage";
 
 export default function App() {
@@ -34,8 +33,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/channel/:username" element={<ChannelPage />} />
-          <Route path="/search" element={<VideoSearchPage />} />
-          <Route path="/users" element={<UserSearchPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/users" element={<UsersRedirect />} />
           <Route path="/create" element={<CreateVideoPage />} />
         </Routes>
 
@@ -43,6 +42,11 @@ export default function App() {
       </div>
     </AuthProvider>
   );
+}
+
+function UsersRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/search${search}`} replace />;
 }
 
 function CreateFab() {

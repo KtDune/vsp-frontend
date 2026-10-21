@@ -358,11 +358,10 @@ export async function unsubscribe(channelId: number): Promise<void> {
 }
 
 export async function searchUsers(name: string): Promise<ProfileUser[]> {
-  const res = await http.get<ProfileUser[]>("/users", {
+  const res = await http.get<{ success: boolean; users?: ProfileUser[] }>("/users", {
     params: { name: name.trim() },
   });
-  const data = res.data;
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(res.data.users) ? res.data.users : [];
 }
 
 export async function fetchVideo(id: number): Promise<VideoDetail> {
