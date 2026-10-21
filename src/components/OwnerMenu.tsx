@@ -34,7 +34,7 @@ export default function OwnerMenu({ label, items }: { label: string; items: Owne
                 key={item.label}
                 onClick={() => item.onClick(close)}
                 disabled={item.disabled || item.busy}
-                className={`block w-full cursor-pointer px-3 py-1.5 text-left text-xs font-medium hover:bg-surface-hover disabled:opacity-50 ${
+                className={`block w-full cursor-pointer px-3 py-1.5 text-left text-sm font-medium hover:bg-surface-hover disabled:opacity-50 ${
                   item.danger ? "text-red-400" : ""
                 }`}
               >

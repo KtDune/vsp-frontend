@@ -260,7 +260,80 @@ export async function fetchUserByName(username: string): Promise<ProfileUser> {
   return user;
 }
 
+export type UserUpdate = {
+  username?: string;
+  password?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+  profileUrl?: string | null;
+};
+
+export async function updateUser(id: number, changes: UserUpdate): Promise<void> {
+  try {
+    const res = await http.put<{ success: boolean; message?: string }>(`/users/${id}`, changes);
+    if (!res.data.success) {
+      throw new Error(res.data.message ?? "Could not update the account");
+    }
+  } catch (err) {
+    throw toError(err, "Could not update the account");
+  }
+}
+
+export async function deleteUser(id: number, password: string): Promise<void> {
+  try {
+    const res = await http.delete<{ success: boolean; message?: string }>(`/users/${id}`, {
+      data: { password },
+    });
+    if (!res.data.success) {
+      throw new Error(res.data.message ?? "Could not delete the account");
+    }
+  } catch (err) {
+    throw toError(err, "Could not delete the account");
+  }
+}
+
 export type SubscriptionStatus = "none" | "pending" | "subscribed";
+
+export type Subscriber = {
+  id: number;
+  subscriberId: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  subscriberUsername: string | null;
+  subscriberProfileUrl: string | null;
+};
+
+export type SubscriberSlice = {
+  content: Subscriber[];
+  last: boolean;
+};
+
+export async function fetchSubscriberCount(channelId: number): Promise<number | null> {
+  try {
+    const res = await http.get<{ success: boolean; subscriberCount?: number }>(
+      `/users/${channelId}/subscriber-count`,
+    );
+    if (!res.data.success) return null;
+    return res.data.subscriberCount ?? 0;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSubscribers(channelId: number, page: number): Promise<SubscriberSlice> {
+  const res = await http.get<{ success: boolean; subscribers?: SubscriberSlice }>(
+    `/users/${channelId}/subscribers`,
+    { params: { page, size: PAGE_SIZE } },
+  );
+  return res.data.subscribers ?? { content: [], last: true };
+}
+
+export async function removeSubscriberById(subscriptionId: number): Promise<void> {
+  const res = await http.delete<{ success: boolean; message?: string }>(
+    `/subscriptions/${subscriptionId}`,
+  );
+  if (!res.data.success) {
+    throw new Error(res.data.message ?? "Could not remove subscriber");
+  }
+}
 
 export async function fetchSubscriptionStatus(channelId: number): Promise<SubscriptionStatus> {
   const res = await http.get<{ success: boolean; status?: string }>(

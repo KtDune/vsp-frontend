@@ -4,15 +4,18 @@ import PostCard from "../components/PostCard";
 import TabButton from "../components/TabButton";
 import VideoCard from "../components/VideoCard";
 import SubscribeButton from "../components/SubscribeButton";
+import SubscribersModal from "../components/SubscribersModal";
 import { defaultAvatar } from "../data/user";
 import {
   fetchPosts,
+  fetchSubscriberCount,
   fetchUserByName,
   fetchVideoPage,
   type Post,
   type ProfileUser,
   type Video,
 } from "../lib/api";
+import { getAuthUser } from "../lib/token";
 
 const formatDate = (iso: string | null) =>
   iso &&
@@ -33,6 +36,8 @@ export default function ChannelPage() {
   const [prevName, setPrevName] = useState<string | null>(invalid ? null : username);
   const [tab, setTab] = useState<"videos" | "posts">("videos");
   const [posts, setPosts] = useState<Post[] | null>(null);
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
+  const [subscribersOpen, setSubscribersOpen] = useState(false);
 
   if (!invalid && prevName !== username) {
     setPrevName(username);
@@ -41,6 +46,8 @@ export default function ChannelPage() {
     setMissing(false);
     setPosts(null);
     setTab("videos");
+    setSubscriberCount(null);
+    setSubscribersOpen(false);
   }
 
   useEffect(() => {
@@ -50,7 +57,11 @@ export default function ChannelPage() {
 
     fetchUserByName(username)
       .then((u) => {
-        if (!cancelled) setUser(u);
+        if (cancelled) return;
+        setUser(u);
+        fetchSubscriberCount(u.id).then((count) => {
+          if (!cancelled) setSubscriberCount(count);
+        });
       })
       .catch(() => {
         if (!cancelled) setMissing(true);
@@ -173,6 +184,14 @@ export default function ChannelPage() {
               {user.createdAt && (
                 <span className="text-xs text-text-dim">Joined {formatDate(user.createdAt)}</span>
               )}
+              {subscriberCount != null && (
+                <button
+                  onClick={() => setSubscribersOpen(true)}
+                  className="cursor-pointer text-xs font-medium text-text hover:underline"
+                >
+                  {subscriberCount} {subscriberCount === 1 ? "subscriber" : "subscribers"}
+                </button>
+              )}
             </div>
           </div>
           <div className="ml-auto shrink-0">
@@ -196,6 +215,18 @@ export default function ChannelPage() {
       </div>
 
       <div className="mt-6">{tab === "videos" ? videosBody : postsBody}</div>
+
+      {subscribersOpen && user && (
+        <SubscribersModal
+          channelId={user.id}
+          channelName={user.username}
+          showRemove={user.id === getAuthUser()?.id}
+          onClose={() => setSubscribersOpen(false)}
+          onRemoved={() =>
+            setSubscriberCount((count) => (count != null ? Math.max(0, count - 1) : count))
+          }
+        />
+      )}
     </main>
   );
 }
